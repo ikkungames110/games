@@ -13,6 +13,12 @@ const restartButton = document.getElementById("restartButton");
 const countdownBox = document.getElementById("countdownBox");
 const countdownText = document.getElementById("countdownText");
 const introOverlay = document.getElementById("introOverlay");
+const introVoiceFiles = [
+  "assets/audio/intro-kebyou.mp3",
+  "assets/audio/intro-taionkei.mp3",
+  "assets/audio/intro-kosure.mp3",
+  "assets/audio/intro-start.mp3"
+];
 
 const BASE_TEMP = 36.5;
 const ROUND_TIME = 10;
@@ -53,6 +59,8 @@ let audioContext = null;
 let lastBeep = 0;
 let lastFrame = performance.now();
 let introTimers = [];
+let introVoices = [];
+let currentIntroVoiceIndex = 0;
 
 function formatTemp(value) {
   if (value >= 100) return Math.floor(value).toLocaleString("ja-JP");
@@ -97,6 +105,32 @@ function beep(kind = "tick") {
   gain.connect(audioContext.destination);
   osc.start(now);
   osc.stop(now + duration);
+}
+
+function loadIntroVoices() {
+  if (introVoices.length) return;
+  introVoices = introVoiceFiles.map((src) => {
+    const audio = new Audio(src);
+    audio.preload = "auto";
+    audio.volume = .95;
+    return audio;
+  });
+}
+
+function playIntroVoice(index) {
+  currentIntroVoiceIndex = index;
+  loadIntroVoices();
+  const audio = introVoices[index];
+  if (!audio) return;
+  audio.currentTime = 0;
+  audio.play().catch(() => {});
+}
+
+function unlockAudioFromGesture() {
+  initAudio();
+  if (!introOverlay.classList.contains("is-hidden")) {
+    playIntroVoice(currentIntroVoiceIndex);
+  }
 }
 
 function setStage(stage) {
@@ -237,6 +271,12 @@ function handleTouchMove(event) {
   if (touch) addFriction(touch.clientX, touch.clientY, performance.now());
 }
 
+function blockPageTouch(event) {
+  const target = event.target;
+  if (target && target.closest && target.closest("button")) return;
+  if (event.cancelable) event.preventDefault();
+}
+
 function resetPointer() {
   lastPoint = null;
   lastDirection = 0;
@@ -306,10 +346,19 @@ function startRound() {
 
 function runIntro() {
   introOverlay.className = "intro-overlay step-1";
-  introTimers.push(setTimeout(() => introOverlay.classList.add("step-2"), 620));
-  introTimers.push(setTimeout(() => introOverlay.classList.add("step-3"), 1240));
+  loadIntroVoices();
+  playIntroVoice(0);
+  introTimers.push(setTimeout(() => {
+    introOverlay.classList.add("step-2");
+    playIntroVoice(1);
+  }, 620));
+  introTimers.push(setTimeout(() => {
+    introOverlay.classList.add("step-3");
+    playIntroVoice(2);
+  }, 1240));
   introTimers.push(setTimeout(() => {
     introOverlay.className = "intro-overlay step-4";
+    playIntroVoice(3);
   }, 2050));
   introTimers.push(setTimeout(startRound, 2780));
 }
@@ -323,6 +372,12 @@ if (window.PointerEvent) {
   window.addEventListener("touchmove", handleTouchMove, { passive: false });
   window.addEventListener("touchend", resetPointer);
 }
+window.addEventListener("pointerdown", unlockAudioFromGesture, { once: true });
+window.addEventListener("touchstart", unlockAudioFromGesture, { once: true, passive: false });
+window.addEventListener("touchstart", blockPageTouch, { passive: false });
+window.addEventListener("touchmove", blockPageTouch, { passive: false });
+window.addEventListener("gesturestart", blockPageTouch, { passive: false });
+window.addEventListener("gesturechange", blockPageTouch, { passive: false });
 window.addEventListener("blur", resetPointer);
 restartButton.addEventListener("click", restart);
 
