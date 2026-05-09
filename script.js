@@ -45,6 +45,9 @@ let started = false;
 let finished = false;
 let lastPoint = null;
 let lastTime = 0;
+let lastDirection = 0;
+let segmentTravel = 0;
+let lastTurnTime = 0;
 let soundReady = false;
 let audioContext = null;
 let lastBeep = 0;
@@ -172,29 +175,51 @@ function addFriction(clientX, clientY, now) {
     return;
   }
 
-  const dx = clientX - lastPoint.x;
   const dy = clientY - lastPoint.y;
-  const distance = Math.hypot(dx, dy);
-  const dt = Math.max(8, now - lastTime);
-  const speed = distance / dt;
-  const gainedPower = clamp(speed / 2.2, 0, 1.55);
+  const absY = Math.abs(dy);
+  const direction = absY >= 2 ? Math.sign(dy) : 0;
 
-  if (distance > 1) {
-    power = clamp(power + gainedPower * .18, 0, 1.2);
-    const elapsedRate = clamp((ROUND_TIME - timeLeft) / ROUND_TIME, 0, 1);
-    const safeTemp = Math.max(temperature - BASE_TEMP, 0);
-    const warmup = clamp(Math.log1p(safeTemp) / Math.log1p(180), 0, 1);
-    const stageRamp = 1 + Math.log1p(Math.max(temperature - 45, 0)) * (.16 + elapsedRate * .42);
-    const lateRamp = 1 + Math.log1p(Math.max(temperature - 700, 0) / 220) * (.25 + elapsedRate * 1.35);
-    const timeRamp = .2 + elapsedRate * elapsedRate * 2.4;
-    const flickRamp = gainedPower * (1 + Math.log1p(gainedPower * 3) * .55);
-    const gain = flickRamp * (.12 + warmup * .86) * stageRamp * lateRamp * timeRamp;
-    temperature += Number.isFinite(gain) ? gain : 0;
-
-    if (now - lastBeep > 115 && temperature > 39) {
-      beep(temperature > 100 ? "warn" : "tick");
-      lastBeep = now;
+  if (direction !== 0) {
+    if (lastDirection === 0) {
+      lastDirection = direction;
+      segmentTravel = 0;
+      lastTurnTime = now;
     }
+
+    const switched = direction !== lastDirection;
+    const validStroke = switched && segmentTravel >= 18;
+
+    if (validStroke) {
+      const interval = Math.max(55, now - lastTurnTime);
+      const turnsPerSecond = clamp(1000 / interval, 0, 24);
+      const turnRate = clamp((turnsPerSecond - 2) / 16, 0, 1);
+
+      power = clamp(power + .018 + turnRate * .032, 0, 1);
+
+      const meterPressure = .22 + power * .55 + turnRate * .42;
+      const elapsedRate = clamp((ROUND_TIME - timeLeft) / ROUND_TIME, 0, 1);
+      const safeTemp = Math.max(temperature - BASE_TEMP, 0);
+      const warmup = clamp(Math.log1p(safeTemp) / Math.log1p(180), 0, 1);
+      const stageRamp = 1 + Math.log1p(Math.max(temperature - 45, 0)) * (.16 + elapsedRate * .42);
+      const lateRamp = 1 + Math.log1p(Math.max(temperature - 700, 0) / 220) * (.25 + elapsedRate * 1.35);
+      const timeRamp = .2 + elapsedRate * elapsedRate * 2.4;
+      const gain = meterPressure * (.12 + warmup * .86) * stageRamp * lateRamp * timeRamp;
+      temperature += Number.isFinite(gain) ? gain : 0;
+
+      if (now - lastBeep > 115 && temperature > 39) {
+        beep(temperature > 100 ? "warn" : "tick");
+        lastBeep = now;
+      }
+
+      lastTurnTime = now;
+      segmentTravel = absY;
+    } else if (switched) {
+      segmentTravel = absY;
+    } else {
+      segmentTravel = Math.min(segmentTravel + absY, 80);
+    }
+
+    lastDirection = direction;
   }
 
   lastPoint = { x: clientX, y: clientY };
@@ -214,6 +239,8 @@ function handleTouchMove(event) {
 
 function resetPointer() {
   lastPoint = null;
+  lastDirection = 0;
+  segmentTravel = 0;
 }
 
 function loop(now) {
@@ -222,7 +249,7 @@ function loop(now) {
 
   if (running && !finished) {
     timeLeft -= delta;
-    power = Math.max(0, power - delta * .85);
+    power = Math.max(0, power - delta * .32);
 
     const cooling = temperature > BASE_TEMP ? (.55 + Math.sqrt(temperature - BASE_TEMP) * .045) * delta : 0;
     temperature = Math.max(BASE_TEMP, temperature - cooling);
@@ -250,6 +277,9 @@ function restart() {
   finished = false;
   lastPoint = null;
   lastTime = 0;
+  lastDirection = 0;
+  segmentTravel = 0;
+  lastTurnTime = 0;
   lastBeep = 0;
   finishModal.hidden = true;
   game.classList.remove("stage-finish");
@@ -267,6 +297,9 @@ function startRound() {
   started = true;
   running = true;
   lastPoint = null;
+  lastDirection = 0;
+  segmentTravel = 0;
+  lastTurnTime = 0;
   lastFrame = performance.now();
   updateVisuals();
 }
