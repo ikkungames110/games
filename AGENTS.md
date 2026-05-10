@@ -3,6 +3,12 @@
 ## File Naming
 
 - HTML ファイルの命名規則は、日時 + `.html` とする。
+- ゲームを修正したら、新しい日時名の HTML ファイルを作成し、`index.html` の転送先を最新の日時 HTML に更新する。
+
+## Versioning
+
+- 現在のバージョンは `script.js` の `GAME_VERSION` で管理し、画面右下に `ver X.X.X` と表示する。
+- ゲームに修正を加えるたびに `GAME_VERSION` を上げる。
 
 ## Deployment
 

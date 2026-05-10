@@ -13,6 +13,7 @@ const restartButton = document.getElementById("restartButton");
 const countdownBox = document.getElementById("countdownBox");
 const countdownText = document.getElementById("countdownText");
 const introOverlay = document.getElementById("introOverlay");
+const GAME_VERSION = "1.0.0";
 const introVoiceFiles = [
   "voice/仮病だ.mp3",
   "voice/体温計を.mp3",
@@ -77,6 +78,19 @@ function formatTemp(value) {
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
+}
+
+function renderVersionBadge() {
+  let versionBadge = document.getElementById("versionBadge");
+  if (!versionBadge) {
+    versionBadge = document.createElement("div");
+    versionBadge.id = "versionBadge";
+    versionBadge.className = "version-badge";
+    versionBadge.setAttribute("aria-label", "Version");
+    game.appendChild(versionBadge);
+  }
+
+  versionBadge.textContent = `ver ${GAME_VERSION}`;
 }
 
 function getStage(value) {
@@ -410,5 +424,6 @@ window.addEventListener("blur", resetPointer);
 restartButton.addEventListener("click", restart);
 
 updateVisuals();
+renderVersionBadge();
 runIntro();
 requestAnimationFrame(loop);

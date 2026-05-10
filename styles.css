@@ -383,6 +383,24 @@ button {
   transform: translate3d(var(--shake), 0, 0);
 }
 
+.version-badge {
+  position: fixed;
+  right: max(8px, env(safe-area-inset-right));
+  bottom: max(6px, env(safe-area-inset-bottom));
+  z-index: 30;
+  padding: 3px 7px;
+  color: rgba(255, 249, 230, .78);
+  background: rgba(12, 8, 10, .54);
+  border: 1px solid rgba(255, 249, 230, .22);
+  border-radius: 4px;
+  font-family: Arial, "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+  font-size: 11px;
+  line-height: 1.2;
+  letter-spacing: 0;
+  pointer-events: none;
+  text-shadow: none;
+}
+
 .meter-row {
   display: flex;
   align-items: center;
