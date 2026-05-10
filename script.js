@@ -13,7 +13,7 @@ const restartButton = document.getElementById("restartButton");
 const countdownBox = document.getElementById("countdownBox");
 const countdownText = document.getElementById("countdownText");
 const introOverlay = document.getElementById("introOverlay");
-const GAME_VERSION = "1.0.1";
+const GAME_VERSION = "1.0.2";
 const introVoiceFiles = [
   "voice/仮病だ.mp3",
   "voice/体温計を.mp3",
@@ -70,6 +70,7 @@ let introVoices = [];
 let currentIntroVoiceIndex = 0;
 let introStarted = false;
 let introAudioBlocked = false;
+let introAwaitingAudioGesture = false;
 let shareButton = null;
 let shareStatus = null;
 
@@ -120,7 +121,10 @@ function getStage(value) {
 }
 
 function initAudio() {
-  if (soundReady) return;
+  if (soundReady) {
+    if (audioContext && audioContext.state === "suspended") audioContext.resume();
+    return;
+  }
   const AudioCtor = window.AudioContext || window.webkitAudioContext;
   if (!AudioCtor) return;
   audioContext = new AudioCtor();
@@ -165,21 +169,24 @@ function playIntroVoice(index) {
   currentIntroVoiceIndex = index;
   loadIntroVoices();
   const audio = introVoices[index];
-  if (!audio) return;
+  if (!audio) return Promise.resolve();
   audio.currentTime = 0;
-  audio.play()
+  return audio.play()
     .then(() => {
       introAudioBlocked = false;
     })
-    .catch(() => {
+    .catch((error) => {
       introAudioBlocked = true;
+      throw error;
     });
 }
 
 function unlockAudioFromGesture() {
   initAudio();
-  if (introStarted && introAudioBlocked && !introOverlay.classList.contains("is-hidden")) {
-    playIntroVoice(currentIntroVoiceIndex);
+  if (introStarted && introAwaitingAudioGesture && !introOverlay.classList.contains("is-hidden")) {
+    introAwaitingAudioGesture = false;
+    introAudioBlocked = false;
+    runIntro({ fromGesture: true });
   }
 }
 
@@ -378,6 +385,7 @@ function restart() {
   lastBeep = 0;
   introStarted = false;
   introAudioBlocked = false;
+  introAwaitingAudioGesture = false;
   finishModal.hidden = true;
   game.classList.remove("stage-finish");
   updateVisuals();
@@ -522,6 +530,7 @@ async function shareResultToX() {
 
 function startRound() {
   introOverlay.classList.add("is-hidden");
+  introOverlay.classList.remove("needs-audio-start");
   started = true;
   running = true;
   lastPoint = null;
@@ -532,27 +541,48 @@ function startRound() {
   updateVisuals();
 }
 
-function runIntro() {
+function waitForIntroAudioGesture() {
+  clearIntroTimers();
+  stopIntroVoices();
+  introAwaitingAudioGesture = true;
+  introAudioBlocked = true;
+  introOverlay.classList.add("needs-audio-start");
+}
+
+function scheduleIntroTimers() {
+  clearIntroTimers();
+  introTimers.push(setTimeout(() => {
+    introOverlay.classList.add("step-2");
+    playIntroVoice(1).catch(() => {});
+  }, introCueTimings.step2));
+  introTimers.push(setTimeout(() => {
+    introOverlay.classList.add("step-3");
+    playIntroVoice(2).catch(() => {});
+  }, introCueTimings.step3));
+  introTimers.push(setTimeout(() => {
+    introOverlay.className = "intro-overlay step-4";
+    playIntroVoice(3).catch(() => {});
+  }, introCueTimings.start));
+  introTimers.push(setTimeout(startRound, introCueTimings.round));
+}
+
+function runIntro(options = {}) {
   clearIntroTimers();
   stopIntroVoices();
   introStarted = true;
   introAudioBlocked = false;
+  introAwaitingAudioGesture = false;
   introOverlay.className = "intro-overlay step-1";
   loadIntroVoices();
-  playIntroVoice(0);
-  introTimers.push(setTimeout(() => {
-    introOverlay.classList.add("step-2");
-    playIntroVoice(1);
-  }, introCueTimings.step2));
-  introTimers.push(setTimeout(() => {
-    introOverlay.classList.add("step-3");
-    playIntroVoice(2);
-  }, introCueTimings.step3));
-  introTimers.push(setTimeout(() => {
-    introOverlay.className = "intro-overlay step-4";
-    playIntroVoice(3);
-  }, introCueTimings.start));
-  introTimers.push(setTimeout(startRound, introCueTimings.round));
+  playIntroVoice(0)
+    .then(scheduleIntroTimers)
+    .catch((error) => {
+      if (!options.fromGesture && error && error.name === "NotAllowedError") {
+        waitForIntroAudioGesture();
+        return;
+      }
+      scheduleIntroTimers();
+    });
 }
 
 if (window.PointerEvent) {
@@ -564,8 +594,10 @@ if (window.PointerEvent) {
   window.addEventListener("touchmove", handleTouchMove, { passive: false });
   window.addEventListener("touchend", resetPointer);
 }
-window.addEventListener("pointerdown", unlockAudioFromGesture, { once: true });
-window.addEventListener("touchstart", unlockAudioFromGesture, { once: true, passive: false });
+window.addEventListener("pointerdown", unlockAudioFromGesture);
+window.addEventListener("touchstart", unlockAudioFromGesture, { passive: false });
+window.addEventListener("click", unlockAudioFromGesture);
+window.addEventListener("keydown", unlockAudioFromGesture);
 window.addEventListener("touchstart", blockPageTouch, { passive: false });
 window.addEventListener("touchmove", blockPageTouch, { passive: false });
 window.addEventListener("gesturestart", blockPageTouch, { passive: false });

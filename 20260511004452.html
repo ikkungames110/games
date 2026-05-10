@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <title>Thermometer Frenzy</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main id="game" class="game stage-normal" aria-label="Thermometer Frenzy">
+    <div id="introOverlay" class="intro-overlay step-1" aria-live="polite">
+      <div class="comic-panel panel-one">仮病だ！</div>
+      <div class="comic-panel panel-two">体温計を</div>
+      <div class="comic-panel panel-three">こすれ！！！</div>
+      <div class="comic-panel panel-start">START!!</div>
+    </div>
+
+    <div class="effects" aria-hidden="true">
+      <span class="spark spark-a"></span>
+      <span class="spark spark-b"></span>
+      <span class="spark spark-c"></span>
+      <span class="bubble bubble-a"></span>
+      <span class="bubble bubble-b"></span>
+      <span class="bubble bubble-c"></span>
+      <span class="steam steam-a"></span>
+      <span class="steam steam-b"></span>
+      <span class="steam steam-c"></span>
+      <span class="meteor meteor-a"></span>
+      <span class="meteor meteor-b"></span>
+    </div>
+
+    <section class="hud" aria-live="polite">
+      <p id="tagline" class="tagline">仮病チャレンジ</p>
+      <div id="countdownBox" class="countdown-box">
+        <span>残り</span>
+        <strong id="countdownText">10.0</strong>
+      </div>
+      <h1 id="tempReadout" class="temperature">36.5<span>℃</span></h1>
+      <p id="statusText" class="status">こすれ！</p>
+    </section>
+
+    <section class="playfield" id="playfield">
+      <div class="fever-card">
+        <div class="thermometer-wrap" aria-hidden="true">
+          <div class="thermometer">
+            <div id="mercury" class="mercury"></div>
+            <div class="ticks"></div>
+            <div class="tube-glare"></div>
+          </div>
+          <div class="bulb">
+            <div class="bulb-core"></div>
+          </div>
+        </div>
+        <div class="doctor-note" id="doctorNote">診断中...</div>
+      </div>
+    </section>
+
+    <section class="bottom-panel">
+      <div class="meter-row">
+        <span>上下</span>
+        <div class="power-bar" aria-hidden="true"><div id="powerFill"></div></div>
+      </div>
+      <div class="stats">
+        <span id="timer">10.0s</span>
+        <span id="maxTemp">MAX 36.5℃</span>
+      </div>
+    </section>
+
+    <div id="finishModal" class="finish-modal" hidden>
+      <div class="finish-burst" aria-hidden="true"></div>
+      <div class="finish-content">
+        <p class="finish-label">RESULT</p>
+        <h2 id="finishTemp">1000℃</h2>
+        <p id="finishCopy">仮病、失敗。</p>
+        <button id="restartButton" type="button">もう一回こする</button>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
