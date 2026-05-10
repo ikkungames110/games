@@ -650,8 +650,14 @@ button {
 }
 
 .finish-content .share-x-button {
+  width: min(100%, 360px);
+  min-height: 74px;
+  margin-top: 10px;
+  padding: 13px 24px;
   background: #111111;
-  box-shadow: 0 5px 0 #1ef1ff;
+  box-shadow: 0 8px 0 #1ef1ff;
+  font-size: clamp(22px, 6.6vw, 34px);
+  line-height: 1.05;
 }
 
 .finish-content .share-status {

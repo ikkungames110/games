@@ -13,7 +13,7 @@ const restartButton = document.getElementById("restartButton");
 const countdownBox = document.getElementById("countdownBox");
 const countdownText = document.getElementById("countdownText");
 const introOverlay = document.getElementById("introOverlay");
-const GAME_VERSION = "1.0.2";
+const GAME_VERSION = "1.0.3";
 const introVoiceFiles = [
   "voice/仮病だ.mp3",
   "voice/体温計を.mp3",
