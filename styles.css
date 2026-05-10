@@ -95,6 +95,10 @@ button {
   pointer-events: none;
 }
 
+.intro-overlay.is-waiting {
+  cursor: pointer;
+}
+
 .comic-panel {
   position: absolute;
   display: grid;
@@ -145,6 +149,12 @@ button {
   font-size: clamp(52px, 14vw, 108px);
   text-shadow: 0 5px 0 #130d0d;
   --panel-rotate: -4deg;
+}
+
+.intro-overlay.is-waiting .panel-start {
+  opacity: 1;
+  transform: translateX(var(--panel-x, 0)) scale(1) rotate(var(--panel-rotate, -4deg));
+  animation: startPulse .72s ease-in-out infinite alternate;
 }
 
 .intro-overlay.step-1 .panel-one,
@@ -621,6 +631,13 @@ button {
   to {
     opacity: 1;
     transform: translateX(var(--panel-x, 0)) scale(1) rotate(var(--panel-rotate, -6deg));
+  }
+}
+
+@keyframes startPulse {
+  to {
+    transform: translateX(var(--panel-x, 0)) scale(1.04) rotate(var(--panel-rotate, -4deg));
+    box-shadow: 12px 12px 0 #130d0d, 0 0 34px rgba(255, 239, 81, .72);
   }
 }
 

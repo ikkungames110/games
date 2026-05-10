@@ -1,5 +1,9 @@
 # AGENTS.md
 
+## File Naming
+
+- HTML ファイルの命名規則は、日時 + `.html` とする。
+
 ## Deployment
 
 - このゲームを修正したら、毎回 GitHub Pages へデプロイする。

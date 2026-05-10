@@ -4,11 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
   <title>Thermometer Frenzy</title>
+  <link rel="preload" as="audio" href="voice/仮病だ.mp3" type="audio/mpeg">
+  <link rel="preload" as="audio" href="voice/体温計を.mp3" type="audio/mpeg">
+  <link rel="preload" as="audio" href="voice/こすれ！.mp3" type="audio/mpeg">
+  <link rel="preload" as="audio" href="voice/スタート！.mp3" type="audio/mpeg">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <main id="game" class="game stage-normal" aria-label="Thermometer Frenzy">
-    <div id="introOverlay" class="intro-overlay step-1" aria-live="polite">
+    <div id="introOverlay" class="intro-overlay is-waiting" aria-live="polite" role="button" tabindex="0">
       <div class="comic-panel panel-one">仮病だ！</div>
       <div class="comic-panel panel-two">体温計を</div>
       <div class="comic-panel panel-three">こすれ！！！</div>

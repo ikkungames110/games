@@ -14,11 +14,17 @@ const countdownBox = document.getElementById("countdownBox");
 const countdownText = document.getElementById("countdownText");
 const introOverlay = document.getElementById("introOverlay");
 const introVoiceFiles = [
-  "assets/audio/intro-kebyou.mp3",
-  "assets/audio/intro-taionkei.mp3",
-  "assets/audio/intro-kosure.mp3",
-  "assets/audio/intro-start.mp3"
+  "voice/仮病だ.mp3",
+  "voice/体温計を.mp3",
+  "voice/こすれ！.mp3",
+  "voice/スタート！.mp3"
 ];
+const introCueTimings = {
+  step2: 700,
+  step3: 1500,
+  start: 2320,
+  round: 3150
+};
 
 const BASE_TEMP = 36.5;
 const ROUND_TIME = 10;
@@ -61,6 +67,7 @@ let lastFrame = performance.now();
 let introTimers = [];
 let introVoices = [];
 let currentIntroVoiceIndex = 0;
+let introStarted = false;
 
 function formatTemp(value) {
   if (value >= 100) return Math.floor(value).toLocaleString("ja-JP");
@@ -128,9 +135,6 @@ function playIntroVoice(index) {
 
 function unlockAudioFromGesture() {
   initAudio();
-  if (!introOverlay.classList.contains("is-hidden")) {
-    playIntroVoice(currentIntroVoiceIndex);
-  }
 }
 
 function setStage(stage) {
@@ -308,6 +312,7 @@ function loop(now) {
 
 function restart() {
   clearIntroTimers();
+  stopIntroVoices();
   temperature = BASE_TEMP;
   maxTemperature = BASE_TEMP;
   power = 0;
@@ -321,15 +326,23 @@ function restart() {
   segmentTravel = 0;
   lastTurnTime = 0;
   lastBeep = 0;
+  introStarted = false;
   finishModal.hidden = true;
   game.classList.remove("stage-finish");
   updateVisuals();
-  runIntro();
+  beginIntroFromGesture();
 }
 
 function clearIntroTimers() {
   introTimers.forEach((timer) => clearTimeout(timer));
   introTimers = [];
+}
+
+function stopIntroVoices() {
+  introVoices.forEach((audio) => {
+    audio.pause();
+    audio.currentTime = 0;
+  });
 }
 
 function startRound() {
@@ -344,23 +357,45 @@ function startRound() {
   updateVisuals();
 }
 
+function prepareIntro() {
+  clearIntroTimers();
+  stopIntroVoices();
+  introStarted = false;
+  currentIntroVoiceIndex = 0;
+  introOverlay.className = "intro-overlay is-waiting";
+}
+
+function beginIntroFromGesture(event) {
+  if (event && event.cancelable) event.preventDefault();
+  if (introStarted || started) return;
+
+  unlockAudioFromGesture();
+  runIntro();
+}
+
+function handleIntroKeydown(event) {
+  if (event.key !== "Enter" && event.key !== " ") return;
+  beginIntroFromGesture(event);
+}
+
 function runIntro() {
+  introStarted = true;
   introOverlay.className = "intro-overlay step-1";
   loadIntroVoices();
   playIntroVoice(0);
   introTimers.push(setTimeout(() => {
     introOverlay.classList.add("step-2");
     playIntroVoice(1);
-  }, 620));
+  }, introCueTimings.step2));
   introTimers.push(setTimeout(() => {
     introOverlay.classList.add("step-3");
     playIntroVoice(2);
-  }, 1240));
+  }, introCueTimings.step3));
   introTimers.push(setTimeout(() => {
     introOverlay.className = "intro-overlay step-4";
     playIntroVoice(3);
-  }, 2050));
-  introTimers.push(setTimeout(startRound, 2780));
+  }, introCueTimings.start));
+  introTimers.push(setTimeout(startRound, introCueTimings.round));
 }
 
 if (window.PointerEvent) {
@@ -372,6 +407,10 @@ if (window.PointerEvent) {
   window.addEventListener("touchmove", handleTouchMove, { passive: false });
   window.addEventListener("touchend", resetPointer);
 }
+introOverlay.addEventListener("pointerdown", beginIntroFromGesture);
+introOverlay.addEventListener("touchstart", beginIntroFromGesture, { passive: false });
+introOverlay.addEventListener("click", beginIntroFromGesture);
+introOverlay.addEventListener("keydown", handleIntroKeydown);
 window.addEventListener("pointerdown", unlockAudioFromGesture, { once: true });
 window.addEventListener("touchstart", unlockAudioFromGesture, { once: true, passive: false });
 window.addEventListener("touchstart", blockPageTouch, { passive: false });
@@ -382,5 +421,5 @@ window.addEventListener("blur", resetPointer);
 restartButton.addEventListener("click", restart);
 
 updateVisuals();
-runIntro();
+prepareIntro();
 requestAnimationFrame(loop);
