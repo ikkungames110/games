@@ -13,7 +13,7 @@ const restartButton = document.getElementById("restartButton");
 const countdownBox = document.getElementById("countdownBox");
 const countdownText = document.getElementById("countdownText");
 const introOverlay = document.getElementById("introOverlay");
-const GAME_VERSION = "1.0.0";
+const GAME_VERSION = "1.0.1";
 const introVoiceFiles = [
   "voice/仮病だ.mp3",
   "voice/体温計を.mp3",
@@ -70,6 +70,8 @@ let introVoices = [];
 let currentIntroVoiceIndex = 0;
 let introStarted = false;
 let introAudioBlocked = false;
+let shareButton = null;
+let shareStatus = null;
 
 function formatTemp(value) {
   if (value >= 100) return Math.floor(value).toLocaleString("ja-JP");
@@ -91,6 +93,26 @@ function renderVersionBadge() {
   }
 
   versionBadge.textContent = `ver ${GAME_VERSION}`;
+}
+
+function renderShareControls() {
+  if (shareButton) return;
+
+  const finishContent = finishModal.querySelector(".finish-content");
+  shareButton = document.createElement("button");
+  shareButton.id = "shareXButton";
+  shareButton.className = "share-x-button";
+  shareButton.type = "button";
+  shareButton.textContent = "Xにポスト";
+
+  shareStatus = document.createElement("p");
+  shareStatus.id = "shareStatus";
+  shareStatus.className = "share-status";
+  shareStatus.setAttribute("aria-live", "polite");
+
+  finishContent.insertBefore(shareButton, restartButton);
+  finishContent.appendChild(shareStatus);
+  shareButton.addEventListener("click", shareResultToX);
 }
 
 function getStage(value) {
@@ -224,6 +246,10 @@ function finishGame() {
   }
 
   finishModal.hidden = false;
+  renderShareControls();
+  shareButton.disabled = false;
+  shareButton.textContent = "Xにポスト";
+  shareStatus.textContent = "";
   beep("boom");
 }
 
@@ -370,6 +396,130 @@ function stopIntroVoices() {
   });
 }
 
+function getShareText() {
+  return `仮病だ！体温計を！こすれ！で${formatTemp(maxTemperature)}度を出して仮病成功だ！！`;
+}
+
+function canvasToBlob(canvas) {
+  return new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+}
+
+function drawFallbackScreenshot() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1080;
+  canvas.height = 1080;
+  const ctx = canvas.getContext("2d");
+  const temp = `${formatTemp(maxTemperature)}℃`;
+
+  const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+  gradient.addColorStop(0, "#fff1a8");
+  gradient.addColorStop(.38, "#ff4f24");
+  gradient.addColorStop(1, "#0a0610");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = "rgba(255, 247, 220, .94)";
+  ctx.strokeStyle = "#160d0d";
+  ctx.lineWidth = 14;
+  ctx.fillRect(94, 214, 892, 594);
+  ctx.strokeRect(94, 214, 892, 594);
+
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#160d0d";
+  ctx.font = "700 48px Arial, sans-serif";
+  ctx.fillText("RESULT", 540, 310);
+
+  ctx.fillStyle = "#f12420";
+  ctx.strokeStyle = "#160d0d";
+  ctx.lineWidth = 8;
+  ctx.font = "900 150px Arial, sans-serif";
+  ctx.strokeText(temp, 540, 505);
+  ctx.fillText(temp, 540, 505);
+
+  ctx.fillStyle = "#160d0d";
+  ctx.font = "700 46px Arial, sans-serif";
+  ctx.fillText(finishCopy.textContent, 540, 625);
+  ctx.font = "700 34px Arial, sans-serif";
+  ctx.fillText(`ver ${GAME_VERSION}`, 540, 710);
+
+  return canvas;
+}
+
+async function createResultImageFile() {
+  let canvas;
+
+  if (window.html2canvas) {
+    game.classList.add("is-capturing");
+    try {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      canvas = await window.html2canvas(game, {
+        backgroundColor: null,
+        scale: Math.min(window.devicePixelRatio || 1, 2)
+      });
+    } finally {
+      game.classList.remove("is-capturing");
+    }
+  } else {
+    canvas = drawFallbackScreenshot();
+  }
+
+  const blob = await canvasToBlob(canvas);
+  if (!blob) return null;
+  return new File([blob], "kebyou-result.png", { type: "image/png" });
+}
+
+async function copyScreenshotToClipboard(file) {
+  if (!navigator.clipboard || !window.ClipboardItem || !file) return false;
+
+  try {
+    await navigator.clipboard.write([
+      new ClipboardItem({ [file.type]: file })
+    ]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function shareResultToX() {
+  const text = getShareText();
+  const shareProbe = new File([""], "kebyou-result.png", { type: "image/png" });
+  const supportsFileShare = Boolean(navigator.canShare && navigator.canShare({ files: [shareProbe] }));
+  const fallbackWindow = supportsFileShare ? null : window.open("about:blank", "_blank");
+
+  shareButton.disabled = true;
+  shareButton.textContent = "準備中...";
+  shareStatus.textContent = "";
+
+  try {
+    const file = await createResultImageFile();
+    const files = file ? [file] : [];
+
+    if (file && supportsFileShare) {
+      await navigator.share({
+        title: "Thermometer Frenzy",
+        text,
+        files
+      });
+    } else {
+      const copied = await copyScreenshotToClipboard(file);
+      const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+      if (fallbackWindow) {
+        fallbackWindow.location.href = url;
+      } else {
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
+      shareStatus.textContent = copied ? "スクショをコピーしました。Xで貼り付けできます。" : "Xの投稿画面を開きました。";
+    }
+  } catch {
+    if (fallbackWindow && !fallbackWindow.closed) fallbackWindow.close();
+    shareStatus.textContent = "共有を開始できませんでした。もう一度押してください。";
+  } finally {
+    shareButton.disabled = false;
+    shareButton.textContent = "Xにポスト";
+  }
+}
+
 function startRound() {
   introOverlay.classList.add("is-hidden");
   started = true;
@@ -425,5 +575,6 @@ restartButton.addEventListener("click", restart);
 
 updateVisuals();
 renderVersionBadge();
+renderShareControls();
 runIntro();
 requestAnimationFrame(loop);

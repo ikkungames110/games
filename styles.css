@@ -619,12 +619,37 @@ button {
 
 .finish-content button {
   min-height: 48px;
+  margin-top: 7px;
   padding: 7px 16px;
   color: white;
   background: #161111;
   border: 0;
   box-shadow: 0 5px 0 #e23422;
   cursor: pointer;
+}
+
+.finish-content button:disabled {
+  cursor: wait;
+  opacity: .68;
+}
+
+.finish-content .share-x-button {
+  background: #111111;
+  box-shadow: 0 5px 0 #1ef1ff;
+}
+
+.finish-content .share-status {
+  min-height: 18px;
+  margin: 9px 0 0;
+  color: #321a12;
+  font-family: Arial, "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.game.is-capturing .finish-content button,
+.game.is-capturing .share-status {
+  display: none;
 }
 
 @keyframes blink {

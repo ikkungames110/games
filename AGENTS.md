@@ -10,6 +10,11 @@
 - 現在のバージョンは `script.js` の `GAME_VERSION` で管理し、画面右下に `ver X.X.X` と表示する。
 - ゲームに修正を加えるたびに `GAME_VERSION` を上げる。
 
+## Sharing
+
+- X 共有は、対応ブラウザでは Web Share API で結果画像と投稿文を渡す。
+- Web Share API が使えない場合は、X の投稿画面を投稿文付きで開き、可能なら結果画像をクリップボードにコピーする。
+
 ## Deployment
 
 - このゲームを修正したら、毎回 GitHub Pages へデプロイする。
