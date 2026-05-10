@@ -20,10 +20,10 @@ const introVoiceFiles = [
   "voice/スタート！.mp3"
 ];
 const introCueTimings = {
-  step2: 700,
-  step3: 1500,
-  start: 2320,
-  round: 3150
+  step2: 1200,
+  step3: 2600,
+  start: 4050,
+  round: 5050
 };
 
 const BASE_TEMP = 36.5;
@@ -68,6 +68,7 @@ let introTimers = [];
 let introVoices = [];
 let currentIntroVoiceIndex = 0;
 let introStarted = false;
+let introAudioBlocked = false;
 
 function formatTemp(value) {
   if (value >= 100) return Math.floor(value).toLocaleString("ja-JP");
@@ -130,11 +131,20 @@ function playIntroVoice(index) {
   const audio = introVoices[index];
   if (!audio) return;
   audio.currentTime = 0;
-  audio.play().catch(() => {});
+  audio.play()
+    .then(() => {
+      introAudioBlocked = false;
+    })
+    .catch(() => {
+      introAudioBlocked = true;
+    });
 }
 
 function unlockAudioFromGesture() {
   initAudio();
+  if (introStarted && introAudioBlocked && !introOverlay.classList.contains("is-hidden")) {
+    playIntroVoice(currentIntroVoiceIndex);
+  }
 }
 
 function setStage(stage) {
@@ -327,10 +337,11 @@ function restart() {
   lastTurnTime = 0;
   lastBeep = 0;
   introStarted = false;
+  introAudioBlocked = false;
   finishModal.hidden = true;
   game.classList.remove("stage-finish");
   updateVisuals();
-  beginIntroFromGesture();
+  runIntro();
 }
 
 function clearIntroTimers() {
@@ -357,29 +368,11 @@ function startRound() {
   updateVisuals();
 }
 
-function prepareIntro() {
+function runIntro() {
   clearIntroTimers();
   stopIntroVoices();
-  introStarted = false;
-  currentIntroVoiceIndex = 0;
-  introOverlay.className = "intro-overlay is-waiting";
-}
-
-function beginIntroFromGesture(event) {
-  if (event && event.cancelable) event.preventDefault();
-  if (introStarted || started) return;
-
-  unlockAudioFromGesture();
-  runIntro();
-}
-
-function handleIntroKeydown(event) {
-  if (event.key !== "Enter" && event.key !== " ") return;
-  beginIntroFromGesture(event);
-}
-
-function runIntro() {
   introStarted = true;
+  introAudioBlocked = false;
   introOverlay.className = "intro-overlay step-1";
   loadIntroVoices();
   playIntroVoice(0);
@@ -407,10 +400,6 @@ if (window.PointerEvent) {
   window.addEventListener("touchmove", handleTouchMove, { passive: false });
   window.addEventListener("touchend", resetPointer);
 }
-introOverlay.addEventListener("pointerdown", beginIntroFromGesture);
-introOverlay.addEventListener("touchstart", beginIntroFromGesture, { passive: false });
-introOverlay.addEventListener("click", beginIntroFromGesture);
-introOverlay.addEventListener("keydown", handleIntroKeydown);
 window.addEventListener("pointerdown", unlockAudioFromGesture, { once: true });
 window.addEventListener("touchstart", unlockAudioFromGesture, { once: true, passive: false });
 window.addEventListener("touchstart", blockPageTouch, { passive: false });
@@ -421,5 +410,5 @@ window.addEventListener("blur", resetPointer);
 restartButton.addEventListener("click", restart);
 
 updateVisuals();
-prepareIntro();
+runIntro();
 requestAnimationFrame(loop);
